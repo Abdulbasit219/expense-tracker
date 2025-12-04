@@ -1,264 +1,145 @@
-import tkinter as tk
-import matplotlib.pyplot as plt
+import customtkinter as ctk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
+def safe_float(v):
+    try:
+        return float(v)
+    except Exception:
+        return 0.0
+
 def calculate_summary(expenses):
-    """Total expense aur category wise breakdown calculate karta hai."""
-    total_expense = sum(item[1] for item in expenses)
-    category_totals = {}
-    for _, amount, category, _ in expenses:
-        category_totals[category] = category_totals.get(category, 0.0) + amount
-    return total_expense, category_totals
+    """expenses: list of (id, Description, Amount, Category, DateTime)"""
+    total = sum(item[2] for item in expenses)
+    categories = {}
+    for _, _, amt, cat, _ in expenses:
+        categories[cat] = categories.get(cat, 0.0) + safe_float(amt)
+    return total, categories
 
-def plot_bar_chart(frame, category_totals):
-    """Matplotlib chart banakar tkinter frame mein embed karta hai."""    
+def plot_in_frame(parent_frame, categories):
 
-    # Figure             
-    fig, ax = plt.subplots(figsize=(5, 3), dpi=80)                
-    fig.patch.set_facecolor('#FFFFFF')  
-    
-    if category_totals:                
-        categories = list(category_totals.keys())                
-        amounts = list(category_totals.values())                
-                        
-        bars = ax.bar(categories, amounts, color='#007BFF')                
-                        
-        ax.set_title('Category Wise Spending', fontsize=12, fontweight='bold')                
-        ax.set_ylabel('Amount (PKR)', fontsize=10)                
-        plt.xticks(rotation=15, fontsize=8) 
-        plt.yticks(fontsize=8)                
-                        
-    else:                
-        ax.text(0.5, 0.5, 'No Data', horizontalalignment='center', verticalalignment='center')                
-        ax.set_title('Category Wise Spending', fontsize=12, fontweight='bold')                
+    for w in parent_frame.winfo_children():
+        w.destroy()
 
-    # Convert chart into tkinter                
-    canvas = FigureCanvasTkAgg(fig, master=frame)                
-    canvas.draw()                
-    canvas.get_tk_widget().pack(fill="both", expand=True)
-
-def calculate_time_based_summary(expenses):
-    weekly_expense = 0
-    monthly_expense = 0
-
-    now = datetime.now()
-    one_week_ago = now - timedelta(days=7)
-    one_month_ago = now - timedelta(days=30)
-
-    for _, amount, _, date_str in expenses:
-        try:
-            expense_date = datetime.strptime(date_str, "%Y-%m-%d")
-            if expense_date >= one_week_ago:
-                weekly_expense += amount
-            if expense_date >= one_month_ago:
-                monthly_expense += amount
-        except ValueError:
-            continue
-    
-    return weekly_expense, monthly_expense
-
-def show_home(root, go_to_add_expense, expenses, go_to_view_expenses):
-    """
-    Complete Home Page showing summary and recent transactions.
-    """
-    # Clear previous widgets
-    for widget in root.winfo_children():
-        widget.destroy()
-
-    # Calculate summary data
-    total_expense, category_totals = calculate_summary(expenses)
-
-    weekly_expense, monthly_expense = calculate_time_based_summary(expenses)
-    
-    # Home Heading and Add Button Frame 
-    header_frame = tk.Frame(root, bg="#D7E9F7")
-    header_frame.pack(fill="x", pady=(30, 20), padx=60)
-
-    tk.Label(
-        header_frame,
-        text="Dashboard Overview",
-        font=("Times New Roman", 28, "bold"),
-        bg="#D7E9F7",
-        fg="#2C3E50"
-    ).pack(side="left")
-
-    # Buttons Container 
-    buttons_frame = tk.Frame(header_frame, bg="#D7E9F7")
-    buttons_frame.pack(side="right")
-
-    # Export Button
-    def export_action():
-        print("Exporting to Excel...")
-
-    export_button = tk.Button( 
-        buttons_frame,
-        text="📊 Export as Excel", 
-        font=("Arial", 12, "bold"),                
-        bg="#1D6F42", 
-        fg="#FFFFFF",                
-        padx=15,                
-        pady=5,                
-        command=export_action,                
-        cursor="hand2",                
-    )
-    export_button.pack(side="left", padx=10)
-
-    # View All Expenses
-    view_button = tk.Button( 
-        buttons_frame,
-        text="👁 View All Expenses",   
-        font=("Arial", 14, "bold"),
-        bg="#007BFF", 
-        fg="#FFFFFF",
-        padx=15,
-        pady=5,
-        command=go_to_view_expenses, 
-        cursor="hand2",
-    )
-    view_button.pack(side="left", padx=10)
-
-    add_button = tk.Button( 
-        buttons_frame,
-        text=" + Add New Expense",   
-        font=("Arial", 16, "bold"),
-        bg="#28a745",                 
-        fg="#FFFFFF",
-        padx=15,
-        pady=5,
-        command=go_to_add_expense,
-        cursor="hand2",
-    )
-    add_button.pack(side="right")
-
-    # Main Content Area 
-    content_area = tk.Frame(root, bg="#D7E9F7")
-    content_area.pack(fill="both", expand=True, padx=60, pady=10)
-
-    # Summary Card 
-    summary_frame = tk.Frame(content_area, bg="#FFFFFF", padx=30, pady=20, 
-                             highlightbackground="#2C3E50", highlightthickness=1)
-    summary_frame.pack(fill="x", pady=20)
-    
-    tk.Label(summary_frame, text="Expense Summary", 
-             font=("Arial", 18, "bold"), bg="#FFFFFF", fg="#2C3E50").pack(anchor="w")
-    
-    # Container frame jo left aur right dono ko hold karega
-    inner_summary_container = tk.Frame(summary_frame, bg="#FFFFFF")
-    inner_summary_container.pack(fill="x", pady=(15, 0))
-    
-    # LEFT Side Frame: Total Expenses (Bada aur Red)
-    left_total_frame = tk.Frame(inner_summary_container, bg="#FFFFFF")
-    left_total_frame.pack(side="left", anchor="nw")
-    
-    tk.Label(left_total_frame, text="Total", 
-             font=("Arial", 14, "bold"), bg="#FFFFFF", fg="#555555").pack(anchor="w")
-    
-    # Bada Amount Label (Red color)
-    tk.Label(left_total_frame, text=f"PKR {total_expense:,.2f}", 
-             font=("Arial", 36, "bold"), bg="#FFFFFF", fg="#DC3545").pack(anchor="w")
-
-    # RIGHT Side Frame: Weekly/Monthly (Chota font)
-    right_details_frame = tk.Frame(inner_summary_container, bg="#FFFFFF", padx=20)
-    right_details_frame.pack(side="right", anchor="ne", expand=True)
-    
-    # Styling for right details
-    label_font = ("Arial", 11)
-    amount_font = ("Arial", 12, "bold")
-    detail_fg = "#343A40"
-    
-    
-    # Weekly Detail
-    tk.Label(right_details_frame, text="Weekly Total", 
-             font=label_font, bg="#FFFFFF", fg="#555555").grid(row=0, column=0, sticky="w", padx=10)
-    tk.Label(right_details_frame, text=f"PKR {weekly_expense:,.2f}", 
-             font=amount_font, bg="#FFFFFF", fg=detail_fg).grid(row=1, column=0, sticky="w", padx=10, pady=(0, 10))
-    
-    # Monthly Detail
-    tk.Label(right_details_frame, text="Monthly Total", 
-             font=label_font, bg="#FFFFFF", fg="#555555").grid(row=0, column=1, sticky="w", padx=10)
-    tk.Label(right_details_frame, text=f"PKR {monthly_expense:,.2f}", 
-             font=amount_font, bg="#FFFFFF", fg=detail_fg).grid(row=1, column=1, sticky="w", padx=10, pady=(0, 10))
-    
-
-    breakdown_label = tk.Label(content_area, text="Spending Breakdown", 
-                                font=("Arial", 20, "bold"), bg="#D7E9F7", fg="#2C3E50")
-    breakdown_label.pack(anchor="w", pady=(30, 10))                
-
-    # Container frame                 
-    visualization_frame = tk.Frame(content_area, bg="#D7E9F7")                
-    visualization_frame.pack(fill="x", pady=10)                
-
-    #category text Breakdown                
-    breakdown_text_frame = tk.Frame(visualization_frame, bg="#FFFFFF", padx=20, pady=10, 
-                                highlightbackground="#2C3E50", highlightthickness=1)
-    breakdown_text_frame.pack(side="left", fill="both", expand=True, padx=(0, 10))
-    
-    row_num = 0
-    if category_totals:
-        for category, total in category_totals.items():
-            if total_expense:
-                percentage = (total / total_expense) * 100  
-            else:
-                percentage = 0
-            
-            tk.Label(breakdown_text_frame, text=f"{category}:", 
-                     font=("Arial", 12), bg="#FFFFFF", fg="#2C3E50", width=15, anchor="w").grid(row=row_num, column=0, sticky="w", pady=2)
-            
-            tk.Label(breakdown_text_frame, text=f"PKR {total:,.0f}", 
-                     font=("Arial", 12, "bold"), bg="#FFFFFF", fg="#007BFF", width=12, anchor="e").grid(row=row_num, column=1, sticky="e", pady=2, padx=5)
-            
-            tk.Label(breakdown_text_frame, text=f"({percentage:.1f}%)", 
-                     font=("Arial", 11), bg="#FFFFFF", fg="#6C757D", width=8, anchor="e").grid(row=row_num, column=2, sticky="e", pady=2)
-            
-            row_num += 1
+    fig, ax = plt.subplots(figsize=(4.8, 2.8), dpi=100)
+    fig.patch.set_facecolor("#222222")  # dark bg for matplotlib
+    if categories:
+        labels = list(categories.keys())
+        values = [categories[k] for k in labels]
+        ax.bar(labels, values, color="#1abc9c")
+        ax.set_title("Category Spending", color="white", fontsize=10)
+        ax.tick_params(axis='x', rotation=20, labelsize=8, colors="white")
+        ax.tick_params(axis='y', labelsize=8, colors="white")
+        ax.set_ylabel("PKR", color="white", fontsize=9)
     else:
-        tk.Label(breakdown_text_frame, text="No expenses recorded yet.", 
-                 font=("Arial", 12, "italic"), bg="#FFFFFF", fg="#6C757D", padx=10, pady=10).pack()                
+        ax.text(0.5, 0.5, "No Data", ha="center", va="center", color="white", fontsize=12)
+        ax.set_xticks([])
+        ax.set_yticks([])
 
-    #  Bar Chart                
-    chart_frame = tk.Frame(visualization_frame, bg="#FFFFFF", highlightbackground="#2C3E50", highlightthickness=1)                
-    chart_frame.pack(side="right", fill="both", expand=True, padx=(10, 0))                
-    
-    # Chart function call                
-    plot_bar_chart(chart_frame, category_totals)                
+    canvas = FigureCanvasTkAgg(fig, master=parent_frame)
+    canvas.draw()
+    canvas.get_tk_widget().pack(fill="both", expand=True, padx=6, pady=6)
 
-    # Recent Transactions List 
-    recent_label = tk.Label(content_area, text="Recent Transactions", 
-                             font=("Arial", 20, "bold"), bg="#D7E9F7", fg="#2C3E50")
-    recent_label.pack(anchor="w", pady=(30, 10))
+def time_based_summary(expenses):
+    now = datetime.now()
+    one_week = now - timedelta(days=7)
+    one_month = now - timedelta(days=30)
+    weekly = 0.0
+    monthly = 0.0
+    for _, _, amt, _, dt in expenses:
+        try:
+            date_part = dt[:19]  # 'YYYY-MM-DD HH:MM:SS'
+            d = datetime.strptime(date_part, "%Y-%m-%d %H:%M:%S")
+            if d >= one_week:
+                weekly += safe_float(amt)
+            if d >= one_month:
+                monthly += safe_float(amt)
+        except Exception:
+            continue
+    return weekly, monthly
 
-    recent_frame = tk.Frame(content_area, bg="#FFFFFF", highlightbackground="#2C3E50", highlightthickness=1)
-    recent_frame.pack(fill="x")
+def render(root, go_add_callback, go_view_callback, expenses, accent_color):
+    # Clear
+    for w in root.winfo_children():
+        w.destroy()
 
-    # Table Headers
-    headers = ["Date", "Description", "Category", "Amount (PKR)"]
-    col_widths = [15, 30, 30, 30]
+    top_frame = ctk.CTkFrame(root, fg_color="transparent")
+    top_frame.pack(fill="x", padx=16, pady=(12,8))
 
-    for col, header in enumerate(headers):
-        tk.Label(recent_frame, text=header, font=("Arial", 14, "bold"), bg="#F1F1F1", fg="#2C3E50", 
-                 padx=10, pady=8, width=col_widths[col], relief="solid").grid(row=0, column=col, sticky="nsew")
+    title = ctk.CTkLabel(top_frame, text="Dashboard Overview", font=ctk.CTkFont(size=20, weight="bold"))
+    title.pack(side="left", padx=(6,0))
 
-    # Display transactions 
-    recent_expenses = sorted(expenses, key=lambda x: x[3], reverse=True)[:5] 
-    
-    for row_num, exp in enumerate(recent_expenses, start=1):
-        date, description, category, amount = exp[3], exp[0], exp[2], f"{exp[1]:,.2f}"
-        
-        data_color = "#343A40"
-        
-        tk.Label(recent_frame, text=date, font=("Arial", 12), bg="#FFFFFF", fg=data_color, 
-                 padx=10, pady=6, width=col_widths[0], anchor="w").grid(row=row_num, column=0, sticky="nsew")
-        
-        tk.Label(recent_frame, text=description, font=("Arial", 12), bg="#FFFFFF", fg=data_color, 
-                 padx=10, pady=6, width=col_widths[1], anchor="w").grid(row=row_num, column=1, sticky="nsew")
-        
-        tk.Label(recent_frame, text=category, font=("Arial", 12), bg="#FFFFFF", fg=data_color, 
-                 padx=10, pady=6, width=col_widths[2], anchor="w").grid(row=row_num, column=2, sticky="nsew")
-        
-        tk.Label(recent_frame, text=amount, font=("Arial", 12, "bold"), bg="#FFFFFF", fg="#DC3545", 
-                 padx=10, pady=6, width=col_widths[3], anchor="e").grid(row=row_num, column=3, sticky="nsew")
+    action_frame = ctk.CTkFrame(top_frame, fg_color="transparent")
+    action_frame.pack(side="right")
 
-    if not recent_expenses:
-        tk.Label(recent_frame, text="No transactions found.", font=("Arial", 12, "italic"), 
-                 bg="#FFFFFF", fg="#6C757D", pady=15, padx=10).grid(row=1, column=0, columnspan=4)
+    btn_add = ctk.CTkButton(action_frame, text="+ Add New", fg_color=accent_color, command=go_add_callback)
+    btn_add.pack(side="right", padx=8)
+    btn_view = ctk.CTkButton(action_frame, text="View All", fg_color="transparent", border_color=accent_color, command=go_view_callback)
+    btn_view.pack(side="right", padx=8)
+
+    # stats area
+    total, categories = calculate_summary(expenses)
+    weekly, monthly = time_based_summary(expenses)
+
+    stats_frame = ctk.CTkFrame(root)
+    stats_frame.pack(fill="x", padx=16, pady=(8,12))
+
+    left_card = ctk.CTkFrame(stats_frame, width=320, height=140)
+    left_card.pack(side="left", padx=(0,12), pady=6)
+    left_card.pack_propagate(False)
+    ctk.CTkLabel(left_card, text="Total Expense", font=ctk.CTkFont(size=12)).pack(anchor="nw", padx=12, pady=(10,0))
+    ctk.CTkLabel(left_card, text=f"PKR {total:,.2f}", font=ctk.CTkFont(size=26, weight="bold"), text_color="#ff6b6b").pack(anchor="nw", padx=12, pady=(6,0))
+
+    right_card = ctk.CTkFrame(stats_frame)
+    right_card.pack(side="left", fill="x", expand=True, padx=(0,12))
+    right_card_inner = ctk.CTkFrame(right_card, fg_color="transparent")
+    right_card_inner.pack(fill="both", expand=True, padx=12, pady=8)
+
+    ctk.CTkLabel(right_card_inner, text=f"Weekly: PKR {weekly:,.2f}", font=ctk.CTkFont(size=12)).grid(row=0, column=0, sticky="w", padx=6)
+    ctk.CTkLabel(right_card_inner, text=f"Monthly: PKR {monthly:,.2f}", font=ctk.CTkFont(size=12)).grid(row=0, column=1, sticky="w", padx=6)
+
+
+    viz_frame = ctk.CTkFrame(root)
+    viz_frame.pack(fill="both", expand=False, padx=16, pady=(8,12))
+
+    breakdown = ctk.CTkFrame(viz_frame, width=420)
+    breakdown.pack(side="left", fill="both", expand=False, padx=(0,12))
+    breakdown.pack_propagate(False)
+    ctk.CTkLabel(breakdown, text="Spending Breakdown", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="nw", padx=10, pady=(8,4))
+
+
+    for cat, amt in categories.items():
+        row = ctk.CTkFrame(breakdown, fg_color="transparent")
+        row.pack(fill="x", padx=8, pady=6)
+        ctk.CTkLabel(row, text=cat, anchor="w").pack(side="left", padx=(4,0))
+        ctk.CTkLabel(row, text=f"PKR {amt:,.0f}", anchor="e").pack(side="right", padx=(0,10))
+
+    chart_holder = ctk.CTkFrame(viz_frame)
+    chart_holder.pack(side="right", fill="both", expand=True)
+    plot_in_frame(chart_holder, categories)
+
+
+    recent_frame = ctk.CTkFrame(root)
+    recent_frame.pack(fill="both", expand=True, padx=16, pady=(12,16))
+
+    ctk.CTkLabel(recent_frame, text="Recent Transactions", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="nw", padx=8, pady=(8,6))
+
+    scroll = ctk.CTkScrollableFrame(recent_frame, height=250)
+    scroll.pack(fill="both", expand=True, padx=8, pady=(0,8))
+
+
+    recent = sorted(expenses, key=lambda x: x[4], reverse=True)[:6]
+    if not recent:
+        ctk.CTkLabel(scroll, text="No transactions yet", text_color="#95a5a6").pack(pady=12)
+    else:
+        for r in recent:
+            fid, desc, amt, cat, dt = r
+            card = ctk.CTkFrame(scroll, fg_color="#2b2b2b", corner_radius=6)
+            card.pack(fill="x", pady=6, padx=6)
+            left = ctk.CTkLabel(card, text=f"{desc}", anchor="w")
+            left.pack(side="left", padx=12, pady=10)
+            mid = ctk.CTkLabel(card, text=f"{cat} • {dt[:10]}", anchor="w", text_color="#95a5a6")
+            mid.pack(side="left", padx=6)
+            right = ctk.CTkLabel(card, text=f"PKR {amt:,.2f}", anchor="e", text_color="#ff6b6b", font=ctk.CTkFont(size=12, weight="bold"))
+            right.pack(side="right", padx=12)

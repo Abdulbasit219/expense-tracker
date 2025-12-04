@@ -1,55 +1,77 @@
-import tkinter as tk
-from add_expense import create_add_expense_form
-from home import show_home
-from view_expenses import show_all_expenses
+import customtkinter as ctk
+from db import connect_db, load_all_expenses
+import home as home_page
+import add_expense as add_page
+import view_expenses as view_page
 
-expenses = [
-    ["Hafta bhar ka samaan", 6500.00, "Food", "2025-11-28"],
-    ["Bike ka petrol", 1800.00, "Transport", "2025-11-27"],
-    ["Nayi film ki tickets", 1500.00, "Entertainment", "2025-11-26"],
-    ["Online shoes kharide", 9000.00, "Shopping", "2025-11-25"],
-    ["Bijli ka bill", 4800.00, "Utility", "2025-11-24"],
-    ["Lunch with colleagues", 950.00, "Food", "2025-11-23"],
-    ["Bus/Taxi fare", 700.00, "Transport", "2025-11-22"],
-    ["Gym membership fee", 3000.00, "Other", "2025-11-20"],
-    ["Birthday gift", 2500.00, "Shopping", "2025-11-19"],
-    ["Dinner party", 3500.00, "Food", "2025-11-18"],
-]
+ctk.set_appearance_mode("Dark")
 
-root = tk.Tk()
-root.title("Expense Tracker")
+ACCENT = "#1abc9c"  # teal
+
+# --- App setup ---
+connect_db()
+root = ctk.CTk()
 root.attributes("-fullscreen", True)
-root.config(bg="#D7E9F7")
 root.bind("<Escape>", lambda e: root.attributes("-fullscreen", False))
+root.title("Expense Tracker — Dark Modern")
+root.geometry("1200x760")
+root.minsize(1000, 650)
 
-# ---------- Top Frame for Title ----------
-top_frame = tk.Frame(root, bg="#D7E9F7")
-top_frame.pack(fill="x")
 
-title = tk.Label(
-    top_frame,
-    text="Expense Tracker",
-    font=("Times New Roman", 34, "bold"),
-    bg="#D7E9F7",
-    fg="#2C3E50"
-)
-title.pack(pady=20)
+root.grid_rowconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
 
-# Content Frame 
-content_frame = tk.Frame(root, bg="#D7E9F7")
-content_frame.pack(fill="both", expand=True)
+# --- Sidebar ---
+sidebar = ctk.CTkFrame(root, width=220, corner_radius=0)
+sidebar.grid(row=0, column=0, sticky="nswe")
+sidebar.grid_rowconfigure(6, weight=1)
 
-# Navigation Functions
-def go_home():
-    show_home(content_frame, go_to_add_expense, expenses, go_to_view_expenses)
+title_lbl = ctk.CTkLabel(sidebar, text="Expense Tracker", font=ctk.CTkFont(size=18, weight="bold"))
+title_lbl.grid(row=0, column=0, padx=16, pady=(20, 10), sticky="w")
 
-def go_to_add_expense():
-    create_add_expense_form(content_frame, go_home, expenses)  
 
-def go_to_view_expenses():
-    show_all_expenses(content_frame, go_home, expenses)
+logo = ctk.CTkButton(sidebar, text="🏦", width=36, height=36, fg_color="transparent", hover=False)
+logo.grid(row=1, column=0, padx=16, pady=(0, 20), sticky="w")
 
-# Start Home 
-go_home()
 
+content_frame = ctk.CTkFrame(root, corner_radius=0)
+content_frame.grid(row=0, column=1, sticky="nswe", padx=20, pady=18)
+
+
+expenses = []
+
+def reload_expenses():
+    global expenses
+    expenses = load_all_expenses()
+    return expenses
+
+
+def show_dashboard():
+    reload_expenses()
+    home_page.render(content_frame, go_add, go_view, expenses, ACCENT)
+
+def go_add(expense_index=None):
+
+    add_page.render(content_frame, show_dashboard, expenses, expense_index, ACCENT)
+
+def go_view():
+    reload_expenses()
+    view_page.render(content_frame, show_dashboard, go_add, expenses, ACCENT)
+
+
+btn_dashboard = ctk.CTkButton(sidebar, text="Dashboard", fg_color=ACCENT, hover_color="#16a085", command=show_dashboard)
+btn_dashboard.grid(row=2, column=0, padx=16, pady=8, sticky="we")
+
+btn_add = ctk.CTkButton(sidebar, text="Add Expense", fg_color="transparent", border_color=ACCENT, command=go_add)
+btn_add.grid(row=3, column=0, padx=16, pady=8, sticky="we")
+
+btn_view = ctk.CTkButton(sidebar, text="View Expenses", fg_color="transparent", border_color=ACCENT, command=go_view)
+btn_view.grid(row=4, column=0, padx=16, pady=8, sticky="we")
+
+
+footer = ctk.CTkLabel(sidebar, text="v1.0  •  Dark Teal", text_color="#95a5a6", font=ctk.CTkFont(size=11))
+footer.grid(row=7, column=0, padx=16, pady=10, sticky="s")
+
+
+show_dashboard()
 root.mainloop()
