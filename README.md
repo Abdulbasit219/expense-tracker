@@ -6,7 +6,7 @@ This app allows users to manage daily expenses with an easy-to-use graphical int
 ---
 
 ## 🚀 Features
-- Modern and responsive GUI built with Tkinter  
+- Modern and responsive GUI built with Tkinter and CustomTkinter 
 - Add, view, and manage expenses  
 - Organized project structure  
 - Virtual environment setup   
